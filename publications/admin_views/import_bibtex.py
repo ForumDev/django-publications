@@ -84,6 +84,11 @@ def import_bibtex(request):
                         entry['location'] = entry['address']
                         del entry['address']
 
+                    # If organization is provided, rename to institution
+                    if entry.get('organization'):
+                        entry['institution'] = entry['organization']
+                        del entry['organization']
+
                     # Strip all non-valid bibtex entries from entry
                     invalid = ['type', 'external', 'authors', 'id']
                     entry = dict((k, v) for (k, v) in entry.iteritems() if k in valid and k not in invalid)
