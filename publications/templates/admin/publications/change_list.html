@@ -4,7 +4,7 @@
 
 {% block object-tools-items %}
 	<li>
-		<a href="import_bibtex/" class="addlink focus">{% trans 'Import BibTex' %}</a>
+    <a href="{% url "publication_import_bibtex" %}" class="addlink focus">{% trans 'Import BibTex' %}</a>
 	</li>
 	<li>
 		<a href="add/{% if is_popup %}?_popup=1{% endif %}" class="addlink focus">
