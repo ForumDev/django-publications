@@ -43,7 +43,7 @@ class OrderedModelAdmin(admin.ModelAdmin):
 
     def get_model_info(self):
         return dict(app=self.model._meta.app_label,
-                    model=self.model._meta.module_name)
+                    model=self.model._meta.model_name)
 
     def get_urls(self):
         try:
