@@ -52,12 +52,15 @@ def import_bibtex(request):
                    'author' in entry and \
                    'year' in entry:
                     # parse authors
-                    authors = entry['author'].split(' and ')
-                    for i in range(len(authors)):
-                        author = authors[i].split(',')
-                        author = [author[-1]] + author[:-1]
-                        authors[i] = ' '.join(author)
-                    authors = ', '.join(authors)
+                    authors = entry['author']
+
+                    if not (authors[0] == '{' and authors[-1] == '}'):
+                        authors = authors.split(' and ')
+                        for i in range(len(authors)):
+                            author = authors[i].split(',')
+                            author = [author[-1]] + author[:-1]
+                            authors[i] = ' '.join(author)
+                        authors = ', '.join(authors)
 
                     # determine type
                     type_id = None
