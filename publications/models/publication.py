@@ -5,12 +5,13 @@ __author__ = 'Lucas Theis <lucas@theis.io>'
 __docformat__ = 'epytext'
 
 import calendar
+import urllib, urlparse
 
 from django.db import models
 from django.utils.http import urlquote_plus
 from django.contrib.sites.models import Site
 from publications.fields import PagesField
-from publications.models import Type, List
+from publications.models import Type, List, Style
 from string import ascii_uppercase
 
 class Publication(models.Model):
@@ -31,7 +32,7 @@ class Publication(models.Model):
         help_text='BibTex citation key. Leave blank if unsure.')
     title = models.CharField(max_length=512)
     authors = models.CharField(max_length=2048,
-        help_text='List of authors separated by commas or <i>and</i>.')
+        help_text='List of authors separated by commas or <i>and</i>. Wrap with {} to prevent processing.')
     year = models.PositiveIntegerField(max_length=4)
     month = models.IntegerField(choices=MONTH_CHOICES, blank=True, null=True)
     journal = models.CharField(max_length=256, blank=True)
@@ -70,95 +71,107 @@ class Publication(models.Model):
         models.Model.__init__(self, *args, **kwargs)
 
         # post-process keywords
-        self.keywords = self.keywords.replace(';', ',')
-        self.keywords = self.keywords.replace(', and ', ', ')
-        self.keywords = self.keywords.replace(',and ', ', ')
-        self.keywords = self.keywords.replace(' and ', ', ')
-        self.keywords = [s.strip().lower() for s in self.keywords.split(',')]
-        self.keywords = ', '.join(self.keywords).lower()
+        self.keywords = self.keywords.replace(';', ',') \
+                .replace(', and ', ', ') \
+                .replace(',and ', ', ') \
+                .replace(' and ', ', ')
+        self.keywords = ", ".join([s.strip().lower() for s in self.keywords.split(',')])
 
-        # post-process author names
-        self.authors = self.authors.replace(', and ', ', ')
-        self.authors = self.authors.replace(',and ', ', ')
-        self.authors = self.authors.replace(' and ', ', ')
-        self.authors = self.authors.replace(';', ',')
-
-        # list of authors
-        self.authors_list = [author.strip() for author in self.authors.split(',')]
-
-        # simplified representation of author names
-        self.authors_list_simple = []
-
-        # tests if title already ends with a punctuation mark
-        self.title_ends_with_punct = self.title[-1] in ['.', '!', '?'] \
-            if len(self.title) > 0 else False
-
-        suffixes = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', "Jr.", "Sr."]
-        prefixes = ['Dr.']
-        prepositions = ['van', 'von', 'der', 'de', 'den']
-
-        # further post-process author names
-        for i, author in enumerate(self.authors_list):
-            if author == '':
-                continue
-
-            names = author.split(' ')
-
-            # check if last string contains initials
-            if (len(names[-1]) <= 3) \
-                and names[-1] not in suffixes \
-                and all(c in ascii_uppercase for c in names[-1]):
-                # turn "Gauss CF" into "C. F. Gauss"
-                names = [c + '.' for c in names[-1]] + names[:-1]
-
-            # number of suffixes
-            num_suffixes = 0
-            for name in names[::-1]:
-                if name in suffixes:
-                    num_suffixes += 1
-                else:
-                    break
-
-            # abbreviate names
-            for j, name in enumerate(names[:-1 - num_suffixes]):
-                # don't try to abbreviate these
-                if j == 0 and name in prefixes:
-                    continue
-                if j > 0 and name in prepositions:
-                    continue
-
-                if (len(name) > 2) or (len(name) and (name[-1] != '.')):
-                    k = name.find('-')
-                    if 0 < k + 1 < len(name):
-                        # take care of dash
-                        names[j] = name[0] + '.-' + name[k + 1] + '.'
-                    else:
-                        names[j] = name[0] + '.'
-
-            if len(names):
-                self.authors_list[i] = ' '.join(names)
-
-                # create simplified/normalized representation of author name
-                if len(names) > 1:
-                    for name in names[0].split('-'):
-                        name_simple = self.simplify_name(' '.join([name, names[-1]]))
-                        self.authors_list_simple.append(name_simple)
-                else:
-                    self.authors_list_simple.append(self.simplify_name(names[0]))
-
-        # list of authors in BibTex format
-        self.authors_bibtex = ' and '.join(self.authors_list)
-
-        # overwrite authors string
-        if len(self.authors_list) > 2:
-            self.authors = ', and '.join([
-                ', '.join(self.authors_list[:-1]),
-                self.authors_list[-1]])
-        elif len(self.authors_list) > 1:
-            self.authors = ' and '.join(self.authors_list)
+        # If the author name is wrapped in brackets, don't process
+        if self.authors and self.authors[0] == '{' and self.authors[-1] == '}':
+            self.authors_list = [self.authors[1:-1]]
         else:
-            self.authors = self.authors_list[0]
+            # post-process author names
+            self.authors = self.authors.replace(', and ', ', ') \
+                .replace(',and ', ', ') \
+                .replace(' and ', ', ') \
+                .replace(';', ',')
 
+            # list of authors
+            self.authors_list = [author.strip() for author in self.authors.split(',')]
+
+            # simplified representation of author names
+            self.authors_list_simple = []
+
+            # tests if title already ends with a punctuation mark
+            self.title_ends_with_punct = self.title[-1] in ['.', '!', '?'] \
+                if len(self.title) > 0 else False
+
+            suffixes = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', "Jr.", "Sr."]
+            prefixes = ['Dr.']
+            prepositions = ['van', 'von', 'der', 'de', 'den']
+
+            # further post-process author names
+            for i, author in enumerate(self.authors_list):
+                if author == '':
+                    continue
+
+                names = author.split(' ')
+
+                # check if last string contains initials
+                if (len(names[-1]) <= 3) \
+                    and names[-1] not in suffixes \
+                    and all(c in ascii_uppercase for c in names[-1]):
+                    # turn "Gauss CF" into "C. F. Gauss"
+                    names = [c + '.' for c in names[-1]] + names[:-1]
+
+                # number of suffixes
+                num_suffixes = 0
+                for name in names[::-1]:
+                    if name in suffixes:
+                        num_suffixes += 1
+                    else:
+                        break
+
+                # abbreviate names
+                for j, name in enumerate(names[:-1 - num_suffixes]):
+                    # don't try to abbreviate these
+                    if j == 0 and name in prefixes:
+                        continue
+                    if j > 0 and name in prepositions:
+                        continue
+
+                    if (len(name) > 2) or (len(name) and (name[-1] != '.')):
+                        k = name.find('-')
+                        if 0 < k + 1 < len(name):
+                            # take care of dash
+                            names[j] = name[0] + '.-' + name[k + 1] + '.'
+                        else:
+                            names[j] = name[0] + '.'
+
+                if len(names):
+                    self.authors_list[i] = ' '.join(names)
+
+                    # create simplified/normalized representation of author name
+                    if len(names) > 1:
+                        for name in names[0].split('-'):
+                            name_simple = self.simplify_name(' '.join([name, names[-1]]))
+                            self.authors_list_simple.append(name_simple)
+                    else:
+                        self.authors_list_simple.append(self.simplify_name(names[0]))
+
+            # list of authors in BibTex format
+            self.authors_bibtex = ' and '.join(self.authors_list)
+
+            # overwrite authors string
+            if len(self.authors_list) > 2:
+                self.authors = ', and '.join([
+                    ', '.join(self.authors_list[:-1]),
+                    self.authors_list[-1]])
+            elif len(self.authors_list) > 1:
+                self.authors = ' and '.join(self.authors_list)
+            else:
+                self.authors = self.authors_list[0]
+
+        # Add magic methods for every style in the database
+        def get_format(name):
+            def return_format():
+                return self.type.styletemplate_set.get(style__name="Harvard").format(self)
+            return return_format
+
+        styles = Style.objects.values_list('name', flat=True)
+        for s in styles:
+            setattr(self, 'format_%s' % s.lower(), get_format(s))
 
     def __unicode__(self):
         if len(self.title) < 64:
@@ -170,7 +183,6 @@ class Publication(models.Model):
                 return self.title[:61] + '...'
             else:
                 return self.title[:index] + '...'
-
 
     def keywords_escaped(self):
         return [(keyword.strip(), urlquote_plus(keyword.strip()))

@@ -110,5 +110,93 @@
             "list": "Highlights",
             "description": "Highlights"
         }
+    },
+    {
+        "model": "publications.style",
+        "pk": 1,
+        "fields": {
+            "name": "Harvard"
+        }
+    },
+    {
+        "model": "publications.styletemplate",
+        "pk": 1,
+        "fields": {
+            "bibtype": 1, 
+            "style": 1,
+            "template": "{{ authors }}. {{ year }}. {{ title }}. <i>{{ journal }}</i>. {% if volume %}{{ volume }}{% endif }}{% if number %}({{ number }}){% endif %}. {{ pages }}."
+        }
+    },
+    {
+        "model": "publications.styletemplate",
+        "pk": 2,
+        "fields": {
+            "bibtype": 2, 
+            "style": 1,
+            "template": "{{ authors }}. {{ year }}."
+        }
+    },
+    {
+        "model": "publications.styletemplate",
+        "pk": 3,
+        "fields": {
+            "bibtype": 3, 
+            "style": 1,
+            "template": "{{ authors }}. {{ year }}."
+        }
+    },
+    {
+        "model": "publications.styletemplate",
+        "pk": 4,
+        "fields": {
+            "bibtype": 4, 
+            "style": 1,
+            "template": "{{ authors }}. {{ year }}."
+        }
+    },
+    {
+        "model": "publications.styletemplate",
+        "pk": 5,
+        "fields": {
+            "bibtype": 5, 
+            "style": 1,
+            "template": "{{ authors }}. {{ year }}."
+        }
+    },
+    {
+        "model": "publications.styletemplate",
+        "pk": 6,
+        "fields": {
+            "bibtype": 6, 
+            "style": 1,
+            "template": "{{ authors }}. {{ year }}."
+        }
+    },
+    {
+        "model": "publications.styletemplate",
+        "pk": 7,
+        "fields": {
+            "bibtype": 7, 
+            "style": 1,
+            "template": "{{ authors }}. {{ year }}."
+        }
+    },
+    {
+        "model": "publications.styletemplate",
+        "pk": 8,
+        "fields": {
+            "bibtype": 8, 
+            "style": 1,
+            "template": "{{ authors }}. {{ year }}."
+        }
+    },
+    {
+        "model": "publications.styletemplate",
+        "pk": 9,
+        "fields": {
+            "bibtype": 9, 
+            "style": 1,
+            "template": "{{ authors }}. {{ year }}."
+        }
     }
 ]
