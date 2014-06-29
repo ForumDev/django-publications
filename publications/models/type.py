@@ -49,6 +49,6 @@ class Type(OrderedModel):
 
     def get_bibtex_optional_list(self):
         return [s.strip() for s in self.bibtex_optional_fields.split(",")] \
-                if len(self.bibtex_optional_fields) \
+                if self.bibtex_optional_fields \
                 else []
 

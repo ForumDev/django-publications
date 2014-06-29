@@ -25,7 +25,7 @@ class PublicationAdmin(admin.ModelAdmin):
     search_fields = ('title', 'journal', 'authors', 'keywords', 'year')
     inlines = [CustomLinkInline, CustomFileInline]
 
-    def change_view(self, request, object_id, form_url='', extra_content=None):
+    def change_view(self, request, object_id, *args, **kwargs):
         # Get the required and optional fields
         t = Publication.objects.get(pk=object_id).type
         required_fields = t.get_bibtex_required_list()
@@ -37,7 +37,7 @@ class PublicationAdmin(admin.ModelAdmin):
                 ['type', 'title', 'authors', 'year'] + required_fields}),
         ]
 
-        if len(optional_fields):
+        if optional_fields:
             self.fieldsets.append((None, {'fields': optional_fields}))
 
         # Ensure that none of the optional-applicable-to-all fields are required
@@ -56,4 +56,4 @@ class PublicationAdmin(admin.ModelAdmin):
         self.form = PublicationAdminForm
         self.readonly_fields = ('type',)
 
-        return super(PublicationAdmin, self).change_view(request, object_id, form_url, extra_content)
+        return super(PublicationAdmin, self).change_view(request, object_id, *args, **kwargs)
