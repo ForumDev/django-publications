@@ -2,6 +2,8 @@ __license__ = 'MIT License <http://www.opensource.org/licenses/mit-license.php>'
 __author__ = 'Lucas Theis <lucas@theis.io>'
 __docformat__ = 'epytext'
 
+import re
+
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.contrib.admin.views.decorators import staff_member_required
@@ -88,6 +90,11 @@ def import_bibtex(request):
                     if entry.get('organization'):
                         entry['institution'] = entry['organization']
                         del entry['organization']
+
+                    # If URL is provided, ensure it's encoded
+                    # For now, just replace all spaces with %20
+                    if entry.get('url'):
+                        entry['url'] = re.sub(' ', '%20', entry['url'])
 
                     # Strip all non-valid bibtex entries from entry
                     invalid = ['type', 'external', 'authors', 'id']
