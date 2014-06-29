@@ -1,5 +1,6 @@
 from django.db import models
 from django.dispatch import receiver
+from django.forms import model_to_dict
 from django.template import Template, Context
 
 class StyleTemplate(models.Model):
@@ -11,11 +12,16 @@ class StyleTemplate(models.Model):
         return self.bibtype.type
 
     def format(self, publication):
-        context  = {
-            'authors': self.format_authors(publication),
-            'year': publication.year,
-            'title': publication.title,
-        }
+        context = model_to_dict(publication)
+        context['authors'] = self.format_authors(publication)
+
+        t = self.template
+        if context.get('url'):
+            t = '<a href={{ url }}">' + t + '</a>'
+
+        t = Template(t)
+        c = Context(context)
+        return t.render(c)
 
     def format_authors(self, publication):
         names = publication.authors_list
