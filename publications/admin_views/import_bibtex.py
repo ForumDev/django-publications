@@ -2,6 +2,7 @@ __license__ = 'MIT License <http://www.opensource.org/licenses/mit-license.php>'
 __author__ = 'Lucas Theis <lucas@theis.io>'
 __docformat__ = 'epytext'
 
+import string
 import re
 
 from django.shortcuts import render_to_response
@@ -51,6 +52,13 @@ def import_bibtex(request):
                 if 'title' in entry and \
                    'author' in entry and \
                    'year' in entry:
+
+                    # Check the title and year are unique
+                    count = Publication.objects.filter(title=entry['title'], year=entry['year']).count()
+                    if count:
+                        errors['bibliography'] = 'Entry with this title and year already exists'
+                        break
+
                     # parse authors
                     authors = entry['author']
 
@@ -72,9 +80,8 @@ def import_bibtex(request):
                         errors['bibliography'] = 'Type "' + entry['type'] + '" unknown.'
                         break
 
-                    valid = map(lambda x: x.name, Publication._meta.fields)
-
                     # Set missing fields
+                    valid = map(lambda x: x.name, Publication._meta.fields)
                     for v in valid:
                         if not v in entry and v not in ['number', 'volume', 'urldate']:
                             entry[v] = ''
@@ -93,6 +100,22 @@ def import_bibtex(request):
                     if entry.get('organization'):
                         entry['institution'] = entry['organization']
                         del entry['organization']
+
+                    # If key is provided, rename to citekey
+                    if entry.get('key'):
+                        entry['citekey'] = entry['key']
+                        del entry['key']
+
+                    # Otherwise generate a cite key
+                    else:
+                        aut_list = authors.split(',')[0].split('. ')
+                        aut_list.reverse()
+                        entry['citekey'] = aut_list[0] + entry['year']
+
+                    # Ensure that the cite key is unique and if not append letters
+                    pubs = Publication.objects.filter(citekey__startswith=entry['citekey']).count()
+                    if pubs:
+                        entry['citekey'] += string.lowercase[pubs]
 
                     # If URL is provided, ensure it's encoded
                     # For now, just replace all spaces with %20
