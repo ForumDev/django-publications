@@ -1,7 +1,7 @@
 [
     {
-    "model": "publications.type",
-    "pk": 1,
+        "model": "publications.type",
+        "pk": 1,
         "fields": {
             "order": 0,
             "type": "Journal",
@@ -13,8 +13,8 @@
         }
     },
     {
-    "model": "publications.type",
-    "pk": 2,
+        "model": "publications.type",
+        "pk": 2,
         "fields": {
             "order": 1,
             "type": "Conference",
@@ -24,8 +24,8 @@
         }
     },
     {
-    "model": "publications.type",
-    "pk": 3,
+        "model": "publications.type",
+        "pk": 3,
         "fields": {
             "order": 2,
             "type": "Technical Report",
@@ -35,8 +35,8 @@
         }
     },
     {
-    "model": "publications.type",
-    "pk": 4,
+        "model": "publications.type",
+        "pk": 4,
         "fields": {
             "order": 3,
             "type": "Book",
@@ -48,8 +48,8 @@
         }
     },
     {
-    "model": "publications.type",
-    "pk": 5,
+        "model": "publications.type",
+        "pk": 5,
         "fields": {
             "order": 4,
             "type": "Book Chapter",
@@ -59,8 +59,8 @@
         }
     },
     {
-    "model": "publications.type",
-    "pk": 6,
+        "model": "publications.type",
+        "pk": 6,
         "fields": {
             "order": 5,
             "type": "Abstract",
@@ -70,8 +70,8 @@
         }
     },
     {
-    "model": "publications.type",
-    "pk": 7,
+        "model": "publications.type",
+        "pk": 7,
         "fields": {
             "order": 6,
             "type": "Thesis",
@@ -81,8 +81,8 @@
         }
     },
     {
-    "model": "publications.type",
-    "pk": 8,
+        "model": "publications.type",
+        "pk": 8,
         "fields": {
             "order": 7,
             "type": "Unpublished",
@@ -92,8 +92,8 @@
         }
     },
     {
-    "model": "publications.type",
-    "pk": 9,
+        "model": "publications.type",
+        "pk": 9,
         "fields": {
             "order": 8,
             "type": "Web Page",
@@ -104,8 +104,8 @@
         }
     },
     {
-    "model": "publications.list",
-    "pk": 1,
+        "model": "publications.list",
+        "pk": 1,
         "fields": {
             "list": "Highlights",
             "description": "Highlights"
