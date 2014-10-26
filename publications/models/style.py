@@ -17,7 +17,7 @@ class StyleTemplate(models.Model):
 
         t = self.template
         if context.get('url'):
-            t = '<a href={{ url }}">' + t + '</a>'
+            t = '<a href="{{ url }}">' + t + '</a>'
 
         t = Template(t)
         c = Context(context)
