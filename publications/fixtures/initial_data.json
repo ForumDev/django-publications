@@ -124,7 +124,7 @@
         "fields": {
             "bibtype": 1, 
             "style": 1,
-            "template": "{{ authors }}. {{ year }}. {{ title }}. <i>{{ journal }}</i>. {% if volume %}{{ volume }}{% endif }}{% if number %}({{ number }}){% endif %}. {{ pages }}."
+            "template": "{{ authors }}. {{ year }}. {{ title }}. <i>{{ journal }}</i>. {% if volume %}{{ volume }}{% endif %}{% if number %}({{ number }}){% endif %}. {{ pages }}."
         }
     },
     {
