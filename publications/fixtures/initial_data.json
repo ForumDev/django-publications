@@ -104,6 +104,17 @@
         }
     },
     {
+        "model": "publications.type",
+        "pk": 10,
+        "fields": {
+            "order": 9,
+            "type": "Report",
+            "description": "Reports",
+            "bibtex_types": "report",
+            "hidden": 0
+        }
+    },
+    {
         "model": "publications.list",
         "pk": 1,
         "fields": {
