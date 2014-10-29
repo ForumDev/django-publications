@@ -1,4 +1,6 @@
 import logging
+import os
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from publications.forms import ImportBibtexForm
 from publications.models import Publication
@@ -53,10 +55,12 @@ invalid_type = """
 
 
 class ImportBibtexTests(TestCase):
-    def bib_form(self, data):
-        return ImportBibtexForm(data={
+    fixtures = ['commencedata']
+
+    def bib_form(self, data, file_dict=None):
+        return ImportBibtexForm({
             'bibliography': data,
-        })
+        }, file_dict)
 
     def test_import_bibliography_nonsense(self):
         form = ImportBibtexForm(data={
@@ -91,3 +95,23 @@ class ImportBibtexTests(TestCase):
         self.assertIn('bibliography', form.errors.keys())
         self.assertIn(form.error_messages['wrong_type'], form.errors.values()[0])
         self.assertNotIn('Swyngedouw', form.data['bibliography'])
+
+    def test_import_bibliography_not_unique(self):
+        form = self.bib_form(valid1)
+        self.assertTrue(form.is_valid())
+        form = self.bib_form(valid1)
+        self.assertFalse(form.is_valid())
+
+    def test_import_bibliography_upload_file(self):
+        upload_file = open(os.path.join(os.path.dirname(__file__), 'simple.bib'))
+        file_dict = {'upload': SimpleUploadedFile(upload_file.name, upload_file.read())}
+        form = self.bib_form(None, file_dict)
+        self.assertTrue(form.is_valid())
+
+    def test_import_bibliography_upload_non_unique_and_invalid_type(self):
+        upload_file = open(os.path.join(os.path.dirname(__file__), 'duplicate.bib'))
+        file_dict = {'upload': SimpleUploadedFile(upload_file.name, upload_file.read())}
+        form = self.bib_form(None, file_dict)
+        self.assertFalse(form.is_valid())
+        self.assertIn('bibliography', form.errors.keys())
+        self.assertIn('upload', form.errors.keys())

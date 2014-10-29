@@ -9,7 +9,7 @@ from django.shortcuts import render
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.http import HttpResponseRedirect
-from publications.bibtex import parse
+from publications.helpers import parse
 from publications.forms import ImportBibtexForm
 from publications.models import Publication, Type
 
@@ -23,11 +23,10 @@ def import_bibtex(request):
             'form': ImportBibtexForm(),
         })
 
-    form = ImportBibtexForm(request.POST)
+    form = ImportBibtexForm(request.POST, request.FILES)
     if form.is_valid():
-        s = 's' if len(publications) > 1 else ''
-        msg = 'Successfully added %d publication%s.' % (len(publications), s)
-        messages.info(request, msg)
+        s = 's' if form.number_pubs_saved > 1 else ''
+        messages.info(request, "%d publication%s successfully created" % (form.number_pubs_saved, s))
         return HttpResponseRedirect('../')
 
     else:

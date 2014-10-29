@@ -28,6 +28,7 @@ class Publication(models.Model):
 
     type = models.ForeignKey(Type)
     citekey = models.CharField(max_length=512, blank=True, null=True,
+        unique=True,
         help_text='BibTex citation key. Leave blank if unsure.')
     title = models.CharField(max_length=512)
     authors = models.CharField(max_length=2048,
@@ -44,10 +45,11 @@ class Publication(models.Model):
     location = models.CharField(max_length=256, blank=True)
     series = models.CharField(max_length=256, blank=True)
     pages = PagesField(max_length=32, blank=True)
-    note = models.CharField(max_length=256, blank=True)
-    keywords = models.CharField(max_length=256, blank=True,
+    note = models.TextField(blank=True)
+    keywords = models.TextField(blank=True,
         help_text='List of keywords separated by commas.')
     url = models.URLField(blank=True, verbose_name='URL',
+        max_length=1000,
         help_text='Link to PDF or journal page.')
     urldate = models.DateField(blank=True, null=True, verbose_name='URL Date',
         help_text='Date url visited',
