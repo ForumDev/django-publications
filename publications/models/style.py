@@ -64,7 +64,6 @@ def post_save_type(sender, instance, created, raw, **kwargs):
     # If loading models from a fixture, ignore because the db will get messed up
     # Similarly, if the type has already been created we don't need to do this
     if raw or not created: return
-    print 'here, abort'
 
     # For each existing style, create a corresponding StyleTemplate to this Type
     styles = Style.objects.all()

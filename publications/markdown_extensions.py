@@ -42,7 +42,6 @@ class CitationPreprocessor(markdown.preprocessors.Preprocessor):
             footnotes.append("[^%s]: %s" % (
                 pub.citekey, self.markdown.htmlStash.store(pub.format_harvard(), safe=True)))
 
-        print new_lines.split("\n") + footnotes
         return new_lines.split("\n") + footnotes
 
 
