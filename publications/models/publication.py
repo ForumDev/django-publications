@@ -5,14 +5,13 @@ __author__ = 'Lucas Theis <lucas@theis.io>'
 __docformat__ = 'epytext'
 
 import calendar
-import urllib, urlparse
-
 from django.db import models
 from django.utils.http import urlquote_plus
 from django.contrib.sites.models import Site
 from publications.fields import PagesField
 from publications.models import Type, List, Style
 from string import ascii_uppercase
+
 
 class Publication(models.Model):
     """
@@ -33,7 +32,7 @@ class Publication(models.Model):
     title = models.CharField(max_length=512)
     authors = models.CharField(max_length=2048,
         help_text='List of authors separated by commas or <i>and</i>. Wrap with {} to prevent processing.')
-    year = models.PositiveIntegerField(max_length=4)
+    year = models.PositiveIntegerField(max_length=4, blank=True, null=True)
     month = models.IntegerField(choices=MONTH_CHOICES, blank=True, null=True)
     journal = models.CharField(max_length=256, blank=True)
     book_title = models.CharField(max_length=256, blank=True)
@@ -51,7 +50,7 @@ class Publication(models.Model):
     url = models.URLField(blank=True, verbose_name='URL',
         help_text='Link to PDF or journal page.')
     urldate = models.DateField(blank=True, null=True, verbose_name='URL Date',
-            help_text='Date url visited',
+        help_text='Date url visited',
     )
     code = models.URLField(blank=True,
         help_text='Link to page with code.')
@@ -218,7 +217,7 @@ class Publication(models.Model):
     def month_bibtex(self):
         return self.MONTH_BIBTEX.get(self.month, '')
 
-    
+
     def month_long(self):
         for month_int, month_str in self.MONTH_CHOICES:
             if month_int == self.month:

@@ -67,6 +67,10 @@ def parse(string):
         bib.append({'type': entry[0].lower(), 'key': entry[1]})
 
         for key, value in pairs:
+            # If there's a type defined, it will mess things up so ignore it
+            if key == 'type':
+                continue
+
             # post-process key and value
             key = key.lower()
             if value and value[0] == '"' and value[-1] == '"':
@@ -84,3 +88,14 @@ def parse(string):
             bib[-1][key] = value
 
     return bib
+
+
+def unparse(entries):
+    es = []
+    for entry in entries:
+        outline = '@%s{%s,\n\t%s}'
+        type = entry.pop('type')
+        key = entry.pop('key')
+        joined = ',\n\t'.join(['%s = {%s}' % (k, v) for (k, v) in entry.iteritems()])
+        es.append(outline % (type, key, joined))
+    return '\n'.join(es)
