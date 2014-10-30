@@ -18,7 +18,7 @@
 	{% if publication.institution %}{{ publication.institution }},{% endif %}
 	{{ publication.year }}{% if publication.isbn %},
     ISBN {{ publication.isbn }}{% endif %}{% if publication.issn %},
-    ISBN {{ publication.issn }}{% endif %}</i><br />
+    ISSN {{ publication.issn }}{% endif %}</i><br />
 {% endif %}
 {% if publication.keywords %}
 	{% for keyword, keyword_escaped in publication.keywords_escaped %}
