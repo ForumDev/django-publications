@@ -66,6 +66,7 @@ class Publication(models.Model):
     abstract = models.TextField(blank=True)
     isbn = models.CharField(max_length=32, verbose_name="ISBN", blank=True,
         help_text='Only for a book.') # A-B-C-D
+    issn = models.CharField(max_length=32, verbose_name="ISSN", blank=True) # A-B
     lists = models.ManyToManyField(List, blank=True)
 
     def __init__(self, *args, **kwargs):
@@ -291,7 +292,9 @@ class Publication(models.Model):
 
         if self.isbn:
             contextObj.append('rft.isbn=' + urlquote_plus(self.isbn))
-
+        if self.issn:
+            contextObj.append('rft.issn=' + urlquote_plus(self.issn))
+            
         return '&'.join(contextObj)
 
 

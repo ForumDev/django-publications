@@ -42,7 +42,7 @@ class PublicationAdmin(admin.ModelAdmin):
 
         # Ensure that none of the optional-applicable-to-all fields are required
         general_fields = [
-                'citekey', 'keywords', 'url', 'urldate', 'code', 'pdf', 'doi', 'isbn', 'note', 'external']
+                'citekey', 'keywords', 'url', 'urldate', 'code', 'pdf', 'doi', 'isbn','issn', 'note', 'external']
         general_fields = [k for k in general_fields if k not in required_fields]
 
         self.fieldsets.extend([
