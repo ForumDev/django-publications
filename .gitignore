@@ -6,3 +6,5 @@ MANIFEST
 build
 dist
 *.ropeproject
+.project
+.pydevproject
