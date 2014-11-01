@@ -5,12 +5,338 @@ __author__ = 'Lucas Theis <lucas@theis.io>'
 __docformat__ = 'epytext'
 
 import calendar
+import warnings
+
 from django.db import models
+from django.dispatch import receiver
+from django.forms import model_to_dict
+from django.template import Template, Context
+
 from django.utils.http import urlquote_plus
 from django.contrib.sites.models import Site
 from publications.fields import PagesField
-from publications.models import Type, List, Style
 from string import ascii_uppercase
+
+
+
+from django.contrib.contenttypes.models import ContentType
+from django.core.urlresolvers import reverse
+from django.db.models import Max, Min, F
+from django.utils.translation import ugettext as _
+
+class OrderedModel(models.Model):
+    """
+    An abstract model that allows objects to be ordered relative to each other.
+    Provides an ``order`` field.
+    """
+
+    order = models.PositiveIntegerField(editable=False, db_index=True)
+    order_with_respect_to = None
+
+    class Meta:
+        abstract = True
+        ordering = ('order',)
+
+    def _get_order_with_respect_to(self):
+        return getattr(self, self.order_with_respect_to)
+
+    def _valid_ordering_reference(self, reference):
+        return self.order_with_respect_to is None or (
+            self._get_order_with_respect_to() == reference._get_order_with_respect_to()
+        )
+
+    def get_ordering_queryset(self, qs=None):
+        qs = qs or self._default_manager.all()
+        order_with_respect_to = self.order_with_respect_to
+        if order_with_respect_to:
+            value = self._get_order_with_respect_to()
+            qs = qs.filter((order_with_respect_to, value))
+        return qs
+
+    def save(self, *args, **kwargs):
+        if not self.id:
+            c = self.get_ordering_queryset().aggregate(Max('order')).get('order__max')
+            self.order = 0 if c is None else c + 1
+        super(OrderedModel, self).save(*args, **kwargs)
+
+    def _move(self, up, qs=None):
+        qs = self.get_ordering_queryset(qs)
+
+        if up:
+            qs = qs.order_by('-order').filter(order__lt=self.order)
+        else:
+            qs = qs.filter(order__gt=self.order)
+        try:
+            replacement = qs[0]
+        except IndexError:
+            # already first/last
+            return
+        self.order, replacement.order = replacement.order, self.order
+        self.save()
+        replacement.save()
+
+    def move(self, direction, qs=None):
+        warnings.warn(
+            _("The method move() is deprecated and will be removed in the next release."),
+            DeprecationWarning
+        )
+        if direction == 'up':
+            self.up()
+        else:
+            self.down()
+
+    def move_down(self):
+        """
+        Move this object down one position.
+        """
+        warnings.warn(
+            _("The method move_down() is deprecated and will be removed in the next release. Please use down() instead!"),
+            DeprecationWarning
+        )
+        return self.down()
+
+    def move_up(self):
+        """
+        Move this object up one position.
+        """
+        warnings.warn(
+            _("The method move_up() is deprecated and will be removed in the next release. Please use up() instead!"),
+            DeprecationWarning
+        )
+        return self.up()
+
+    def swap(self, qs):
+        """
+        Swap the positions of this object with a reference object.
+        """
+        try:
+            replacement = qs[0]
+        except IndexError:
+            # already first/last
+            return
+        if not self._valid_ordering_reference(replacement):
+            raise ValueError(
+                "%r can only be swapped with instances of %r which %s equals %r." % (
+                    self, self.__class__, self.order_with_respect_to,
+                    self._get_order_with_respect_to()
+                )
+            )
+        self.order, replacement.order = replacement.order, self.order
+        self.save()
+        replacement.save()
+
+    def up(self):
+        """
+        Move this object up one position.
+        """
+        self.swap(self.get_ordering_queryset().filter(order__lt=self.order).order_by('-order'))
+
+    def down(self):
+        """
+        Move this object down one position.
+        """
+        self.swap(self.get_ordering_queryset().filter(order__gt=self.order))
+
+    def to(self, order):
+        """
+        Move object to a certain position, updating all affected objects to move accordingly up or down.
+        """
+        if order is None or self.order == order:
+            # object is already at desired position
+            return
+        qs = self.get_ordering_queryset()
+        if self.order > order:
+            qs.filter(order__lt=self.order, order__gte=order).update(order=F('order') + 1)
+        else:
+            qs.filter(order__gt=self.order, order__lte=order).update(order=F('order') - 1)
+        self.order = order
+        self.save()
+
+    def above(self, ref):
+        """
+        Move this object above the referenced object.
+        """
+        if not self._valid_ordering_reference(ref):
+            raise ValueError(
+                "%r can only be moved above instances of %r which %s equals %r." % (
+                    self, self.__class__, self.order_with_respect_to,
+                    self._get_order_with_respect_to()
+                )
+            )
+        if self.order == ref.order:
+            return
+        if self.order > ref.order:
+            o = ref.order
+        else:
+            o = self.get_ordering_queryset().filter(order__lt=ref.order).aggregate(Max('order')).get('order__max') or 0
+        self.to(o)
+
+    def below(self, ref):
+        """
+        Move this object below the referenced object.
+        """
+        if not self._valid_ordering_reference(ref):
+            raise ValueError(
+                "%r can only be moved below instances of %r which %s equals %r." % (
+                    self, self.__class__, self.order_with_respect_to,
+                    self._get_order_with_respect_to()
+                )
+            )
+        if self.order == ref.order:
+            return
+        if self.order > ref.order:
+            o = self.get_ordering_queryset().filter(order__gt=ref.order).aggregate(Min('order')).get('order__min') or 0
+        else:
+            o = ref.order
+        self.to(o)
+
+    def top(self):
+        """
+        Move this object to the top of the ordered stack.
+        """
+        o = self.get_ordering_queryset().aggregate(Min('order')).get('order__min')
+        self.to(o)
+
+    def bottom(self):
+        """
+        Move this object to the bottom of the ordered stack.
+        """
+        o = self.get_ordering_queryset().aggregate(Max('order')).get('order__max')
+        self.to(o)
+
+class Type(OrderedModel):
+    class Meta:
+        ordering = ('order',)
+        verbose_name_plural = '  Types'
+
+    type = models.CharField(max_length=128)
+    description = models.CharField(max_length=128)
+    bibtex_types = models.CharField(max_length=256, default='article',
+            verbose_name='BibTex types',
+            help_text='Possible BibTex types, separated by comma.')
+    bibtex_required_fields = models.TextField(
+            verbose_name='BibTeX required fields',
+            help_text='Required fields (not including title, author, year)',
+    )
+    bibtex_optional_fields = models.TextField(
+            blank=True, null=True,
+            verbose_name='BibTeX optional fields',
+            help_text='Optional fields (not including title, author, year)',
+    )
+
+    hidden = models.BooleanField(
+        default=False,
+        help_text='Hide publications from main view.')
+
+    def __unicode__(self):
+        return self.type
+
+
+    def __init__(self, *args, **kwargs):
+        OrderedModel.__init__(self, *args, **kwargs)
+
+        self.bibtex_types = self.bibtex_types.replace('@', '')
+        self.bibtex_types = self.bibtex_types.replace(';', ',')
+        self.bibtex_types = self.bibtex_types.replace('and', ',')
+        self.bibtex_type_list = [s.strip().lower()
+            for s in self.bibtex_types.split(',')]
+        self.bibtex_types = ', '.join(self.bibtex_type_list)
+        self.bibtex_type = self.bibtex_type_list[0]
+
+    def get_bibtex_required_list(self):
+        return [s.strip() for s in self.bibtex_required_fields.split(",")]
+
+    def get_bibtex_optional_list(self):
+        return [s.strip() for s in self.bibtex_optional_fields.split(",")] \
+                if self.bibtex_optional_fields \
+                else []
+
+class List(models.Model):
+    """
+    Model representing a list of publications.
+    """
+
+    class Meta:
+        ordering = ('list',)
+        verbose_name_plural = 'Lists'
+
+    list = models.CharField(max_length=128)
+    description = models.CharField(max_length=128)
+
+    def __unicode__(self):
+        return self.list
+    
+
+class Style(models.Model):
+    """
+    When Style created, need to create x StyleTemplate with FK to Type and FK to Style.
+    When Type created, need to create new StyleTemplate for each Style.
+    StyleTemplate should not ever be created manually.
+
+    """
+    name  = models.CharField(max_length=256, unique=True)
+    bibtype = models.ManyToManyField('Type', through='StyleTemplate')
+
+    def __unicode__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        from publications.models import Type
+        create_style_templates = self.pk is None
+        super(Style, self).save(*args, **kwargs)
+        if create_style_templates:
+            # Look up Types and create a StyleTemplate for each
+            types = Type.objects.all()
+            for t in types:
+                StyleTemplate(
+                        style=self,
+                        bibtype=t,
+                        template="",
+                ).save()
+
+@receiver(models.signals.post_save, sender='publications.Type')
+def post_save_type(sender, instance, created, raw, **kwargs):
+    # If loading models from a fixture, ignore because the db will get messed up
+    # Similarly, if the type has already been created we don't need to do this
+    if raw or not created: return
+
+    # For each existing style, create a corresponding StyleTemplate to this Type
+    styles = Style.objects.all()
+    for s in styles:
+        StyleTemplate(
+                style=s,
+                bibtype=instance,
+                template="",
+        ).save()
+        
+class StyleTemplate(models.Model):
+    style = models.ForeignKey('Style')
+    bibtype = models.ForeignKey('Type')
+    template = models.TextField()
+
+    def __unicode__(self):
+        return self.bibtype.type
+
+    def format(self, publication):
+        context = model_to_dict(publication)
+        context['authors'] = self.format_authors(publication)
+
+        t = self.template
+        if context.get('url'):
+            t = '<a href="{{ url }}">' + t + '</a>'
+
+        t = Template(t)
+        c = Context(context)
+        return t.render(c)
+
+    def format_authors(self, publication):
+        names = publication.authors_list
+        lnames = len(names)
+        if lnames >= 4:
+            return '{} et al.'.format(names[0])
+        if lnames > 1:
+            return '{} and {}'.format(', '.join(names[:-1]), names[-1])
+        return names[0]
 
 
 class Publication(models.Model):
@@ -318,3 +644,23 @@ class Publication(models.Model):
         name = name.replace( u'ü', u'ue')
         name = name.replace( u'ß', u'ss')
         return name
+
+class CustomFile(models.Model):
+    publication = models.ForeignKey(Publication)
+    description = models.CharField(max_length=256)
+    file = models.FileField(upload_to='publications/')
+
+    def __unicode__(self):
+        return self.description
+
+class CustomLink(models.Model):
+    publication = models.ForeignKey(Publication)
+    description = models.CharField(max_length=256)
+    url = models.URLField(verbose_name='URL')
+
+    def __unicode__(self):
+        return self.description
+
+
+
+        
