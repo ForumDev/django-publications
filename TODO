@@ -1,0 +1,3 @@
+migrate to django 1.7
+- take apart models again
+- view url -> named url (import_bibtex)
