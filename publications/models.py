@@ -244,7 +244,9 @@ class Type(OrderedModel):
         self.bibtex_type = self.bibtex_type_list[0]
 
     def get_bibtex_required_list(self):
-        return [s.strip() for s in self.bibtex_required_fields.split(",")]
+        return [s.strip() for s in self.bibtex_required_fields.split(",")] \
+                if self.bibtex_optional_fields \
+                else []
 
     def get_bibtex_optional_list(self):
         return [s.strip() for s in self.bibtex_optional_fields.split(",")] \
